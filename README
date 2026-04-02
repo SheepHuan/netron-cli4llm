@@ -1,132 +1,24 @@
 # NetronCli
 
-依赖 [Netron](https://github.com/lutzroeder/netron) 项目，提供关键命令行脚本，
-将 Netron 的模型转换能力暴露出来，让 LLM 读懂计算图结构。
+NetronCli 基于 [Netron](https://github.com/lutzroeder/netron)，
+提供命令行能力把深度学习模型解析成 LLM 更易消费的结构化 JSON。
 
-## LLM 友好的统一 JSON 方案
+## 项目能做什么
 
-统一表示为 JSON，并将“模型结构”和“参数读取”分离，减少上下文长度：
+- 检查模型基础信息（`inspect`）
+- 导出模型结构（`graph.json`）
+- 导出参数索引（`weights_manifest.json`）
+- 为“结构先读、参数按需读”的 LLM 工作流提供标准输出
 
-1. `graph.json`（默认加载，轻量）
-2. `weights_manifest.json`（按需加载，索引）
-3. `weights.bin` 或 `weights/<param>.json`（参数实体，可延迟读取）
-
-### graph.json（结构）
-
-- 模型元信息：`name`、`format`、`opset`、`producer`
-- I/O：输入输出张量的 `name/shape/dtype`
-- 节点：`id/op/inputs/outputs/attrs_ref`
-- 边：`from/to/tensor`
-- 子图信息（可选）
-
-### weights_manifest.json（参数索引）
-
-- 参数名：`name`
-- 归属节点：`node_id`
-- 数据类型与形状：`dtype/shape`
-- 存储定位：`storage`（如 `weights.bin#offset=...,length=...`）
-- 统计摘要（可选）：`min/max/mean/std`
-
-### 设计原则
-
-- 默认只喂 `graph.json` 给 LLM。
-- LLM 提出问题后，再按节点或参数名局部拉取参数信息。
-- 避免把大体积权重直接塞进上下文。
-
-## 以 Git Submodule 引入 Netron（固定 tag: v8.9.9）
-
-在你的主仓库根目录执行：
-
-```bash
-git submodule add https://github.com/lutzroeder/netron.git netron
-git -C netron checkout v8.9.9
-git add .gitmodules netron
-git commit -m "chore: add netron submodule pinned to v8.9.9"
-```
-
-后续 clone 项目时：
-
-```bash
-git clone --recurse-submodules <your-repo-url>
-```
-
-已有仓库补拉 submodule：
-
-```bash
-git submodule update --init --recursive
-```
-
-说明：submodule 固定的是某个 commit；上面的 `checkout v8.9.9` 会让主仓库记录该 tag 对应的 commit。
-
-## CLI 实现（当前版本）
-
-当前已实现一个基于 Node.js 的 `netron-cli`，直接复用 Netron 的 `ModelFactoryService` 解析模型。
-
-### 命令
+## 快速开始
 
 ```bash
 node ./bin/netron-cli.mjs --help
-node ./bin/netron-cli.mjs inspect <model-path> [--json]
-node ./bin/netron-cli.mjs export graph <model-path> -o graph.json
-node ./bin/netron-cli.mjs export weights <model-path> -o weights_manifest.json
+node ./bin/netron-cli.mjs inspect <model-path> --json
 node ./bin/netron-cli.mjs export all <model-path> --out-dir out/
 ```
 
-### 使用仓库内 sample 快速验证
+## 文档
 
-```bash
-node ./bin/netron-cli.mjs inspect ./samples/onnx/squeezenet1.0-3.onnx --json
-node ./bin/netron-cli.mjs export all ./samples/onnx/squeezenet1.0-3.onnx --out-dir ./out/sample
-```
-
-### 输出
-
-- `graph.json`: 模型结构（graph / node / edge / tensor type）
-- `weights_manifest.json`: 参数索引（不默认展开参数值）
-
-### 跨平台策略
-
-- 运行时：Node.js 18+
-- 无原生依赖，支持 Windows / Linux / macOS
-- CI 覆盖：`x64` + `arm64`（可用 runner）
-
-## 免 Node 二进制分发
-
-可以分发为二进制，目标主机不需要安装 Node.js。
-
-### 本地构建
-
-```bash
-npm install
-npm run package:portable
-npm run package:fused
-```
-
-产物目录示例（两种模式）：
-
-- Portable 模式（目录直跑）  
-  `dist/portable/<platform>-<arch>/netron-cli.portable`（Windows 为 `netron-cli.portable.cmd`）
-- `dist/portable/<platform>-<arch>/runtime/node(.exe)`
-- `dist/portable/<platform>-<arch>/netron/source/*`
-- Fused 模式（bundle + 启动器）  
-  `dist/fused/<platform>-<arch>/netron-cli.fused`（Windows 为 `netron-cli.fused.cmd`）
-  `dist/fused/<platform>-<arch>/netron-cli.fused.bundle.tgz`
-
-说明：
-- Portable：直接在目录内运行，适合调试与问题排查。
-- Fused：运行时自动解包到临时目录再启动，分发文件更集中。
-
-也可以显式指定包目录标签：
-
-```bash
-npm run package:portable -- --label linux-x64
-npm run package:fused -- --label linux-x64
-```
-
-### 多平台构建
-
-通过 GitHub Actions 工作流 `.github/workflows/binary-release.yml` 在各平台原生 runner 上构建：
-
-- Linux x64 / arm64
-- macOS x64 / arm64
-- Windows x64
+- 二进制构建与分发：[`docs/BINARY_BUILD_AND_RELEASE.md`](docs/BINARY_BUILD_AND_RELEASE.md)
+- 二进制使用：[`docs/BINARY_USAGE.md`](docs/BINARY_USAGE.md)
