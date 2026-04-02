@@ -1,0 +1,66 @@
+name: binary-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x64
+            mode: portable
+          - os: ubuntu-24.04-arm
+            label: linux-arm64
+            mode: portable
+          - os: macos-13
+            label: macos-x64
+            mode: portable
+          - os: macos-14
+            label: macos-arm64
+            mode: portable
+          - os: windows-latest
+            label: win-x64
+            mode: portable
+          - os: ubuntu-latest
+            label: linux-x64-fused
+            mode: fused
+          - os: ubuntu-24.04-arm
+            label: linux-arm64-fused
+            mode: fused
+          - os: macos-13
+            label: macos-x64-fused
+            mode: fused
+          - os: macos-14
+            label: macos-arm64-fused
+            mode: fused
+          - os: windows-latest
+            label: win-x64-fused
+            mode: fused
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install deps
+        run: npm install
+
+      - name: Build binary
+        run: npm run package:${{ matrix.mode }} -- --label ${{ matrix.label }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: netron-cli-${{ matrix.label }}
+          path: dist/${{ matrix.mode }}/${{ matrix.label }}

@@ -1,0 +1,21 @@
+{
+  "name": "netron-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CLI for parsing model graphs via Netron and exporting LLM-friendly JSON",
+  "bin": {
+    "netron-cli": "./bin/netron-cli.mjs"
+  },
+  "scripts": {
+    "cli": "node ./bin/netron-cli.mjs",
+    "check": "node ./bin/netron-cli.mjs --help",
+    "package:bin": "node ./scripts/package-portable.mjs",
+    "package:portable": "node ./scripts/package-portable.mjs",
+    "package:fused": "node ./scripts/package-fused.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
